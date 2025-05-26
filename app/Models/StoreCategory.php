@@ -9,11 +9,18 @@ class StoreCategory extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'store_id'];
+    // أضف category_id هنا لأنه صار ممكن تحطه في قاعدة البيانات
+    protected $fillable = ['name', 'store_id', 'category_id'];
 
     // علاقة مع المتجر
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    // علاقة مع القسم العام (Category)
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }

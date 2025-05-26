@@ -12,6 +12,9 @@ use App\Http\Controllers\Admin\ProductModerationController;
 use App\Http\Controllers\Admin\StoreModerationController;
 use App\Http\Controllers\StoreProductController;
 use App\Http\Controllers\StoreCategoryController;
+use App\Http\Controllers\Admin\CategoryAdminController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\ComplaintController;
 
 
 
@@ -44,9 +47,9 @@ Route::prefix('store')->group(function () {
     Route::middleware('auth:sanctum')->post('/logout', [StoreAuthController::class, 'logout']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('categories', CategoryController::class);
-});
+//Route::middleware('auth:sanctum')->group(function () {
+    //Route::apiResource('categories', CategoryController::class);
+  //});
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -69,15 +72,15 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-    Route::get('/products/pending', [ProductModerationController::class, 'pending']);
-    Route::post('/products/{id}/approve', [ProductModerationController::class, 'approve']);
-    Route::delete('/products/{id}/reject', [ProductModerationController::class, 'reject']);
+    Route::get('/products/pending', [ProductModerationController::class, 'pending']);  //المنتجات التي لم يتم الموافقة عليها بعد
+    Route::post('/products/{id}/approve', [ProductModerationController::class, 'approve']);  //الموافقة على منتج
+    Route::delete('/products/{id}/reject', [ProductModerationController::class, 'reject']);  // رفض منتج
 });
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-    Route::get('/stores/pending', [StoreModerationController::class, 'pending']);
-    Route::post('/stores/{id}/approve', [StoreModerationController::class, 'approve']);
-    Route::delete('/stores/{id}/reject', [StoreModerationController::class, 'reject']);
+    Route::get('/stores/pending', [StoreModerationController::class, 'pending']);  //المخازن التي لم يتم الموافقة عليها بعد
+    Route::post('/stores/{id}/approve', [StoreModerationController::class, 'approve']); //الموافقة على مخزن
+    Route::delete('/stores/{id}/reject', [StoreModerationController::class, 'reject']);  // رفض مخزن
 });
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
@@ -85,11 +88,68 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 });
 
 
-Route::middleware('auth:sanctum')->group(function () {
+//Route::middleware('auth:sanctum')->group(function () {
     // مسار لإضافة الأقسام وعرضها
-    Route::post('/store/categories', [StoreCategoryController::class, 'store']);
-    Route::get('/store/categories', [StoreCategoryController::class, 'index']);
+    //Route::post('/store/categories', [StoreCategoryController::class, 'store']);
+    //Route::get('/store/categories', [StoreCategoryController::class, 'index']);
 
     // مسار لإضافة منتج إلى قسم معين
+    //Route::post('/store/categories/{categoryId}/products', [StoreProductController::class, 'store']);
+//});
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/categories', [CategoryController::class, 'index']);
+});
+
+
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/categories', [CategoryAdminController::class, 'index']);
+    Route::post('/categories', [CategoryAdminController::class, 'store']);
+    Route::put('/categories/{id}', [CategoryAdminController::class, 'update']);
+    Route::delete('/categories/{id}', [CategoryAdminController::class, 'destroy']);
+});
+
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/cart', [CartController::class, 'addToCart']);           // إضافة منتج
+    Route::get('/cart', [CartController::class, 'viewCart']);             // عرض السلة
+    Route::put('/cart/{product_id}', [CartController::class, 'updateQuantity']); // تحديث كمية
+    Route::delete('/cart/{product_id}', [CartController::class, 'removeFromCart']); // حذف منتج
+});
+
+Route::post('/admin/reset-password', [AdminAuthController::class, 'resetPassword']);
+
+// مسار عرض جميع المنتجات المعتمدة
+Route::get('/products', [ProductController::class, 'index']);
+
+// مسارات تغيير وإعادة تعيين كلمة المرور للأدمن
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::post('/change-password', [AdminAuthController::class, 'changePassword']);
+});
+
+Route::prefix('admin')->group(function () {
+    Route::post('/forgot-password', [AdminAuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AdminAuthController::class, 'resetPassword']);
+});
+
+
+Route::middleware(['auth:sanctum', 'identify.actor'])->group(function () {
+    Route::post('/complaints', [ComplaintController::class, 'store']);
+    Route::get('/complaints', [ComplaintController::class, 'index']); // فقط admin
+});
+
+Route::middleware(['auth:sanctum', 'auth.store'])->group(function () {
+    // إضافة وعرض وتعديل وحذف فئات المتجر
+    Route::post('/store/categories', [StoreCategoryController::class, 'store']);
+    Route::get('/store/categories', [StoreCategoryController::class, 'index']);
+    Route::put('/store/categories/{id}', [StoreCategoryController::class, 'update']);
+    Route::delete('/store/categories/{id}', [StoreCategoryController::class, 'destroy']);
+
+    // إضافة وعرض وتعديل وحذف منتجات المتجر
     Route::post('/store/categories/{categoryId}/products', [StoreProductController::class, 'store']);
+    Route::get('/store/products', [StoreProductController::class, 'index']);
+    Route::put('/store/products/{id}', [StoreProductController::class, 'update']);
+    Route::delete('/store/products/{id}', [StoreProductController::class, 'destroy']);
 });

@@ -7,6 +7,19 @@ use App\Models\Product;
 
 class ProductController extends Controller
 {
+    public function index()
+    {
+        $products = Product::where('is_approved', true)
+            ->with(['category', 'user'])
+            ->latest()
+            ->paginate(10);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $products,
+            'message' => 'تم جلب المنتجات بنجاح'
+        ]);
+    }
     public function store(Request $request)
 {
     $request->validate([

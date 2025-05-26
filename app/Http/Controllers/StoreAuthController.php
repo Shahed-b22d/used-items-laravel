@@ -18,9 +18,12 @@ class StoreAuthController extends Controller
             'commercial_record' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
-
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'بيانات غير صالحة',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $imagePath = $request->file('commercial_record')->store('commercial_records', 'public');
@@ -30,41 +33,71 @@ class StoreAuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'commercial_record' => $imagePath,
-            'is_approved' => false, // هذا الحقل يحدد أنه بانتظار الموافقة
+            'is_approved' => false,
         ]);
 
-        $token = $store->createToken('store_token')->plainTextToken;
-
-        return response()->json(['token' => $token, 'store' => $store], 201);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم استلام طلب التسجيل وسيتم مراجعته من قبل الإدارة',
+            'data' => [
+                'name' => $store->name,
+                'email' => $store->email
+            ]
+        ], 201);
     }
-
 
     public function login(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'بيانات غير صالحة',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         $store = Store::where('email', $request->email)->first();
 
         if (!$store || !Hash::check($request->password, $store->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'بيانات الدخول غير صالحة'
+            ], 401);
         }
 
         if (!$store->is_approved) {
             return response()->json([
-                'message' => 'Your account is under review. Please wait for admin approval.'
+                'status' => 'error',
+                'message' => 'حسابك قيد المراجعة من قبل الإدارة'
             ], 403);
         }
 
         $token = $store->createToken('store_token')->plainTextToken;
 
-        return response()->json(['token' => $token, 'store' => $store]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'data' => [
+                'token' => $token,
+                'store' => [
+                    'name' => $store->name,
+                    'email' => $store->email
+                ]
+            ]
+        ]);
     }
 
-
-
-public function logout(Request $request)
-{
-    $request->user()->currentAccessToken()->delete();
-    return response()->json(['message' => 'Logged out successfully']);
-}
-
-
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تسجيل الخروج بنجاح'
+        ]);
+    }
 }
