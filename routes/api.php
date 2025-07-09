@@ -15,6 +15,13 @@ use App\Http\Controllers\StoreCategoryController;
 use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\Admin\DeliveryAgentController;
+use App\Http\Controllers\DeliveryAgentAuthController;
+use App\Http\Controllers\Admin\AdminPasswordController;
+use App\Http\Controllers\UserPasswordController;
+use App\Http\Controllers\StorePasswordController;
+use App\Http\Controllers\DeliveryAgentPasswordController;
+
 
 
 
@@ -58,7 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
+Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AdminAuthController::class, 'logout']);
+});
+
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
+
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     // عرض كل المستخدمين والمتاجر
@@ -119,20 +131,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/{product_id}', [CartController::class, 'removeFromCart']); // حذف منتج
 });
 
-Route::post('/admin/reset-password', [AdminAuthController::class, 'resetPassword']);
 
 // مسار عرض جميع المنتجات المعتمدة
 Route::get('/products', [ProductController::class, 'index']);
 
-// مسارات تغيير وإعادة تعيين كلمة المرور للأدمن
-Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-    Route::post('/change-password', [AdminAuthController::class, 'changePassword']);
-});
+// كلمة المرور
+Route::middleware('auth:sanctum')->post('/admin/change-password', [AdminPasswordController::class, 'changePassword']);
 
-Route::prefix('admin')->group(function () {
-    Route::post('/forgot-password', [AdminAuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AdminAuthController::class, 'resetPassword']);
-});
+// نسيان كلمة المرور
+Route::post('/admin/forgot-password', [AdminPasswordController::class, 'forgotPassword']);
+Route::post('/admin/reset-password', [AdminPasswordController::class, 'resetPassword']);
 
 
 Route::middleware(['auth:sanctum', 'identify.actor'])->group(function () {
@@ -152,4 +160,45 @@ Route::middleware(['auth:sanctum', 'auth.store'])->group(function () {
     Route::get('/store/products', [StoreProductController::class, 'index']);
     Route::put('/store/products/{id}', [StoreProductController::class, 'update']);
     Route::delete('/store/products/{id}', [StoreProductController::class, 'destroy']);
+});
+
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/delivery-agents', [DeliveryAgentController::class, 'index']);
+    Route::post('/delivery-agents', [DeliveryAgentController::class, 'store']);
+    Route::put('/delivery-agents/{id}', [DeliveryAgentController::class, 'update']);
+    Route::delete('/delivery-agents/{id}', [DeliveryAgentController::class, 'destroy']);
+});
+
+
+Route::prefix('delivery-agents')->group(function () {
+    Route::post('login', [DeliveryAgentAuthController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('profile', function (Request $request) {
+            return $request->user();
+        });
+
+        Route::post('logout', [DeliveryAgentAuthController::class, 'logout']);
+        Route::put('update-profile', [DeliveryAgentAuthController::class, 'updateProfile']);
+        // APIs أخرى خاصة بالمندوب يمكن إضافتها هنا
+    });
+});
+
+
+Route::middleware('auth:sanctum')->post('/user/change-password', [UserPasswordController::class, 'change']);
+Route::post('/forgot-password', [UserPasswordController::class, 'sendResetLink']);
+Route::post('/reset-password', [UserPasswordController::class, 'reset']);
+
+
+Route::prefix('store')->group(function () {
+    Route::post('/change-password', [StorePasswordController::class, 'changePassword'])->middleware('auth:sanctum');
+    Route::post('/forgot-password', [StorePasswordController::class, 'forgotPassword']);
+    Route::post('/reset-password', [StorePasswordController::class, 'resetPassword']);
+});
+
+
+Route::prefix('delivery-agent')->group(function () {
+    Route::post('/change-password', [DeliveryAgentPasswordController::class, 'changePassword'])->middleware('auth:sanctum');
+    Route::post('/forgot-password', [DeliveryAgentPasswordController::class, 'forgotPassword']);
+    Route::post('/reset-password', [DeliveryAgentPasswordController::class, 'resetPassword']);
 });

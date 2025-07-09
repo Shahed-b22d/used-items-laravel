@@ -55,6 +55,11 @@ return [
         'provider' => 'stores',
     ],
 
+    'delivery_agent' => [
+    'driver' => 'sanctum',
+    'provider' => 'delivery_agents',
+],
+
 
     ],
 
@@ -89,6 +94,12 @@ return [
         'driver' => 'eloquent',
         'model' => App\Models\Store::class,
     ],
+
+    'delivery_agents' => [
+    'driver' => 'eloquent',
+    'model' => App\Models\DeliveryAgent::class,
+],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -121,6 +132,13 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+            'admins' => [ // 👈 إعدادات إعادة تعيين كلمة السر للأدمن
+        'provider' => 'admins',
+        'table' => 'password_reset_tokens', // تستخدم نفس الجدول
+        'expire' => 60,
+        'throttle' => 60,
+    ],
     ],
 
     /*
