@@ -19,6 +19,7 @@ class Store extends Authenticatable
         'password',
         'commercial_record',
         'is_approved',
+        'location',
     ];
 
     // الحقول المخفية (مثل كلمة المرور)

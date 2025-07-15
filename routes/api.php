@@ -21,7 +21,8 @@ use App\Http\Controllers\Admin\AdminPasswordController;
 use App\Http\Controllers\UserPasswordController;
 use App\Http\Controllers\StorePasswordController;
 use App\Http\Controllers\DeliveryAgentPasswordController;
-
+use App\Http\Controllers\StripePaymentController;
+use App\Http\Controllers\Admin\EarningsReportController;
 
 
 
@@ -132,8 +133,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-// مسار عرض جميع المنتجات المعتمدة
+// مسار عرض جميع المنتجات المعتمدة والغير مباعة
 Route::get('/products', [ProductController::class, 'index']);
+
+// مسار لعرض جميع المنتجات التي قام المستخدم برفعها حتى لو كانت غير معتمدة أو حتى لو كانت مباعة.
+Route::middleware('auth:sanctum')->get('/my-products', [ProductController::class, 'myProducts']);
+
 
 // كلمة المرور
 Route::middleware('auth:sanctum')->post('/admin/change-password', [AdminPasswordController::class, 'changePassword']);
@@ -202,3 +207,21 @@ Route::prefix('delivery-agent')->group(function () {
     Route::post('/forgot-password', [DeliveryAgentPasswordController::class, 'forgotPassword']);
     Route::post('/reset-password', [DeliveryAgentPasswordController::class, 'resetPassword']);
 });
+
+
+// ✅ إنشاء جلسة الدفع عبر Stripe
+Route::post('/checkout', [StripePaymentController::class, 'checkout']);
+
+// ✅ عند نجاح الدفع (لا تحميه بأي middleware!)
+Route::get('/payment-success', [StripePaymentController::class, 'success'])->name('payment.success');
+
+// ✅ عند إلغاء الدفع
+Route::get('/payment-cancel', [StripePaymentController::class, 'cancel'])->name('payment.cancel');
+
+Route::get('/payment-success', [StripePaymentController::class, 'success'])->name('payment.success');
+
+// Webhook استدعاء من Stripe لمعالجة الدفع
+Route::post('/webhook/stripe', [StoreModerationController::class, 'webhook']);
+
+// API للأدمن
+Route::get('/admin/earnings', [EarningsReportController::class, 'index']);
