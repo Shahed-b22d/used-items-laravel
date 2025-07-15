@@ -8,70 +8,73 @@ use App\Models\Earning;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\DeliveryAgent;
-use Carbon\Carbon;
 
 class EarningsReportController extends Controller
 {
     public function index(Request $request)
     {
-        $month = $request->month;
+        $month = $request->query('month');
+        $year = $request->query('year');
 
         $query = Earning::query();
 
-        if ($month) {
-            $query->whereMonth('completed_at', '=', $month);
+        if ($month && $year) {
+            $query->whereMonth('completed_at', $month)
+                ->whereYear('completed_at', $year);
+        } elseif ($month) {
+            $query->whereMonth('completed_at', $month);
+        } elseif ($year) {
+            $query->whereYear('completed_at', $year);
         }
 
         $earnings = $query->get();
 
-        $storeEarnings = $earnings->where('seller_type', 'store');
-        $userEarnings = $earnings->where('seller_type', 'user');
-        $deliveryEarnings = $earnings->whereNotNull('delivery_agent_id');
+        // جمع الأرباح لكل متجر
+        $storeEarnings = $earnings->where('seller_type', 'store')
+            ->groupBy('seller_id')
+            ->map(function ($items, $storeId) {
+                $storeName = Store::find($storeId)?->name ?? 'غير معروف';
+                return [
+                    'store_id' => $storeId,
+                    'store_name' => $storeName,
+                    'total_earning' => $items->sum('seller_earning'),
+                    'total_commission' => $items->sum('commission'),
+                ];
+            })->values();
 
-        $storeTotal = $storeEarnings->sum('seller_earning');
-        $userTotal = $userEarnings->sum('seller_earning');
-        $deliveryTotal = $deliveryEarnings->sum('delivery_fee');
+        // جمع أرباح المستخدمين
+        $userEarnings = $earnings->where('seller_type', 'user')
+            ->groupBy('seller_id')
+            ->map(function ($items, $userId) {
+                $userName = User::find($userId)?->name ?? 'غير معروف';
+                return [
+                    'user_id' => $userId,
+                    'user_name' => $userName,
+                    'total_earning' => $items->sum('seller_earning'),
+                    'total_commission' => $items->sum('commission'),
+                ];
+            })->values();
+
+        // جمع أرباح المندوبين (توصيل)
+        $deliveryEarnings = $earnings->whereNotNull('delivery_agent_id')
+            ->groupBy('delivery_agent_id')
+            ->map(function ($items, $agentId) {
+                $agentName = DeliveryAgent::find($agentId)?->name ?? 'غير معروف';
+                return [
+                    'agent_id' => $agentId,
+                    'agent_name' => $agentName,
+                    'total_delivery_fee' => $items->sum('delivery_fee'),
+                ];
+            })->values();
+
+        // إجمالي أرباح المنصة (كل النسب المقتطعة)
         $platformTotal = $earnings->sum('commission');
 
-        // أسماء البائعين والمندوبين
-        $storeDetails = $storeEarnings->map(function ($e) {
-            $store = Store::find($e->seller_id);
-            return [
-                'store_name' => $store?->name,
-                'earning' => $e->seller_earning,
-            ];
-        });
-
-        $userDetails = $userEarnings->map(function ($e) {
-            $user = User::find($e->seller_id);
-            return [
-                'user_name' => $user?->name,
-                'earning' => $e->seller_earning,
-            ];
-        });
-
-        $deliveryDetails = $deliveryEarnings->map(function ($e) {
-            $agent = DeliveryAgent::find($e->delivery_agent_id);
-            return [
-                'agent_name' => $agent?->name,
-                'earning' => $e->delivery_fee,
-            ];
-        });
-
         return response()->json([
-            'store_earnings' => [
-                'total' => $storeTotal,
-                'details' => $storeDetails,
-            ],
-            'user_earnings' => [
-                'total' => $userTotal,
-                'details' => $userDetails,
-            ],
-            'delivery_agent_earnings' => [
-                'total' => $deliveryTotal,
-                'details' => $deliveryDetails,
-            ],
-            'platform_earnings' => $platformTotal,
+            'stores' => $storeEarnings,
+            'users' => $userEarnings,
+            'delivery_agents' => $deliveryEarnings,
+            'platform_total_commission' => $platformTotal,
         ]);
     }
 }
